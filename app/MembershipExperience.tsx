@@ -14,8 +14,10 @@ type FormValues = {
   zip_code: string;
   why_join: string;
   how_heard: string;
+  how_heard_other: string;
   contribution: string;
-  random_answer: string;
+  presentation_answer: string;
+  penguin_answer: string;
   website: string;
 };
 
@@ -23,31 +25,6 @@ type FieldName = keyof FormValues;
 type FormErrors = Partial<Record<FieldName, string>>;
 
 const VIP_PIN = "1927";
-
-const QUESTIONS = [
-  {
-    value:
-      "What is something you could give a 20-minute presentation about with zero preparation?",
-    lines: (
-      <>
-        What is something you could give a <em>20-minute presentation</em> about
-        with zero preparation?
-      </>
-    ),
-    note: null,
-  },
-  {
-    value:
-      "You have been given a penguin. You cannot sell it or give it away. What do you do?",
-    lines: (
-      <>
-        You have been given a penguin. You cannot sell it or give it away.
-        <em>What do you do?</em>
-      </>
-    ),
-    note: "There is no correct answer. Probably.",
-  },
-] as const;
 
 const EMPTY_FORM: FormValues = {
   first_name: "",
@@ -57,8 +34,10 @@ const EMPTY_FORM: FormValues = {
   zip_code: "",
   why_join: "",
   how_heard: "",
+  how_heard_other: "",
   contribution: "",
-  random_answer: "",
+  presentation_answer: "",
+  penguin_answer: "",
   website: "",
 };
 
@@ -71,20 +50,14 @@ const HEARD_OPTIONS = [
   "Other",
 ];
 
-function pickQuestion() {
-  return Math.random() < 0.5 ? 0 : 1;
-}
-
 export function MembershipExperience() {
   const [screen, setScreen] = useState<Screen>("home");
   const [applicationType, setApplicationType] =
     useState<ApplicationType>("standard");
-  const [questionIndex, setQuestionIndex] = useState(0);
   const [vipUnlocked, setVipUnlocked] = useState(false);
 
   const startApplication = (type: ApplicationType) => {
     setApplicationType(type);
-    setQuestionIndex(pickQuestion());
     setVipUnlocked(type === "standard");
     setScreen("application");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -106,9 +79,8 @@ export function MembershipExperience() {
 
       {screen === "application" && (
         <ApplicationScreen
-          key={`${applicationType}-${questionIndex}`}
+          key={applicationType}
           applicationType={applicationType}
-          questionIndex={questionIndex}
           vipUnlocked={vipUnlocked}
           onUnlock={() => setVipUnlocked(true)}
           onBack={returnHome}
@@ -196,14 +168,12 @@ function HomeScreen({
 
 function ApplicationScreen({
   applicationType,
-  questionIndex,
   vipUnlocked,
   onUnlock,
   onBack,
   onSuccess,
 }: {
   applicationType: ApplicationType;
-  questionIndex: number;
   vipUnlocked: boolean;
   onUnlock: () => void;
   onBack: () => void;
@@ -220,7 +190,7 @@ function ApplicationScreen({
         <span className={isVip ? "application-chip is-vip" : "application-chip"}>
           {isVip ? "VIP application" : "General application"}
         </span>
-        <span className="application-count">09 questions</span>
+        <span className="application-count">10 questions</span>
       </header>
 
       <div className={isVip ? "vip-stage" : undefined}>
@@ -247,7 +217,6 @@ function ApplicationScreen({
 
           <ApplicationForm
             applicationType={applicationType}
-            questionIndex={questionIndex}
             onSuccess={onSuccess}
           />
         </div>
@@ -335,19 +304,15 @@ function VipLock({ onUnlock }: { onUnlock: () => void }) {
 
 function ApplicationForm({
   applicationType,
-  questionIndex,
   onSuccess,
 }: {
   applicationType: ApplicationType;
-  questionIndex: number;
   onSuccess: () => void;
 }) {
   const [values, setValues] = useState<FormValues>(EMPTY_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const question = QUESTIONS[questionIndex];
-
   const requiredNames = useMemo<FieldName[]>(
     () => [
       "first_name",
@@ -355,7 +320,8 @@ function ApplicationForm({
       "email",
       "street_address",
       "zip_code",
-      "random_answer",
+      "presentation_answer",
+      "penguin_answer",
     ],
     [],
   );
@@ -363,6 +329,9 @@ function ApplicationForm({
   const validateField = (name: FieldName, value: string) => {
     const cleanValue = value.trim();
     if (requiredNames.includes(name) && !cleanValue) return "This field is required.";
+    if (name === "how_heard_other" && values.how_heard === "Other" && !cleanValue) {
+      return "Please tell us how you heard about us.";
+    }
     if (
       name === "email" &&
       cleanValue &&
@@ -378,8 +347,10 @@ function ApplicationForm({
       zip_code: 20,
       why_join: 1200,
       how_heard: 80,
+      how_heard_other: 72,
       contribution: 1200,
-      random_answer: 1200,
+      presentation_answer: 1200,
+      penguin_answer: 1200,
     };
     const max = maxLengths[name];
     if (max && value.length > max) return `Keep this answer under ${max} characters.`;
@@ -444,10 +415,13 @@ function ApplicationForm({
           street_address: values.street_address.trim(),
           zip_code: values.zip_code.trim(),
           why_join: values.why_join.trim() || null,
-          how_heard: values.how_heard || null,
+          how_heard:
+            values.how_heard === "Other"
+              ? `Other: ${values.how_heard_other.trim()}`
+              : values.how_heard || null,
           contribution: values.contribution.trim() || null,
-          random_question: question.value,
-          random_answer: values.random_answer.trim(),
+          presentation_answer: values.presentation_answer.trim(),
+          penguin_answer: values.penguin_answer.trim(),
         }),
       });
 
@@ -566,7 +540,12 @@ function ApplicationForm({
             id="how_heard"
             name="how_heard"
             value={values.how_heard}
-            onChange={(event) => updateValue("how_heard", event.target.value)}
+            onChange={(event) => {
+              updateValue("how_heard", event.target.value);
+              if (event.target.value !== "Other") {
+                updateValue("how_heard_other", "");
+              }
+            }}
             onBlur={() => onBlur("how_heard")}
             aria-invalid={Boolean(errors.how_heard)}
             aria-describedby={errors.how_heard ? "how_heard-error" : undefined}
@@ -585,6 +564,33 @@ function ApplicationForm({
             {errors.how_heard}
           </p>
         )}
+        {values.how_heard === "Other" && (
+          <div className="other-source-field">
+            <label className="field-label" htmlFor="how_heard_other">
+              <span>Please specify</span>
+              <span className="required-mark"> *</span>
+            </label>
+            <input
+              id="how_heard_other"
+              name="how_heard_other"
+              type="text"
+              value={values.how_heard_other}
+              maxLength={72}
+              placeholder="Tell us where you found us"
+              onChange={(event) => updateValue("how_heard_other", event.target.value)}
+              onBlur={() => onBlur("how_heard_other")}
+              aria-invalid={Boolean(errors.how_heard_other)}
+              aria-describedby={
+                errors.how_heard_other ? "how_heard_other-error" : undefined
+              }
+            />
+            {errors.how_heard_other && (
+              <p className="field-error" id="how_heard_other-error">
+                {errors.how_heard_other}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <TextareaField
@@ -602,31 +608,74 @@ function ApplicationForm({
         <p className="eyebrow" id="last-thing-heading">
           09 — One last thing
         </p>
-        <p className="random-question">{question.lines}</p>
-        <label className="sr-only" htmlFor="random_answer">
-          Your answer to: {question.value}
+        <p className="random-question">
+          What is something you could give a <em>20-minute presentation</em> about
+          with zero preparation?
+        </p>
+        <label className="sr-only" htmlFor="presentation_answer">
+          Your answer to: What is something you could give a 20-minute presentation
+          about with zero preparation?
         </label>
         <textarea
-          id="random_answer"
-          name="random_answer"
-          value={values.random_answer}
+          id="presentation_answer"
+          name="presentation_answer"
+          value={values.presentation_answer}
           maxLength={1200}
           rows={6}
           placeholder="Your answer..."
-          onChange={(event) => updateValue("random_answer", event.target.value)}
-          onBlur={() => onBlur("random_answer")}
-          aria-invalid={Boolean(errors.random_answer)}
+          onChange={(event) => updateValue("presentation_answer", event.target.value)}
+          onBlur={() => onBlur("presentation_answer")}
+          aria-invalid={Boolean(errors.presentation_answer)}
           aria-describedby={
-            errors.random_answer ? "random_answer-error" : "random_answer-meta"
+            errors.presentation_answer
+              ? "presentation_answer-error"
+              : "presentation_answer-meta"
           }
         />
-        <div className="field-meta" id="random_answer-meta">
-          <span>{question.note}</span>
-          <span>{values.random_answer.length} / 1200</span>
+        <div className="field-meta" id="presentation_answer-meta">
+          <span>Required</span>
+          <span>{values.presentation_answer.length} / 1200</span>
         </div>
-        {errors.random_answer && (
-          <p className="field-error" id="random_answer-error">
-            {errors.random_answer}
+        {errors.presentation_answer && (
+          <p className="field-error" id="presentation_answer-error">
+            {errors.presentation_answer}
+          </p>
+        )}
+      </section>
+
+      <section className="last-thing" aria-labelledby="penguin-heading">
+        <p className="eyebrow" id="penguin-heading">
+          10 — Final question
+        </p>
+        <p className="random-question">
+          You have been given a penguin. You cannot sell it or give it away.
+          <em>What do you do?</em>
+        </p>
+        <label className="sr-only" htmlFor="penguin_answer">
+          Your answer to: You have been given a penguin. You cannot sell it or give
+          it away. What do you do?
+        </label>
+        <textarea
+          id="penguin_answer"
+          name="penguin_answer"
+          value={values.penguin_answer}
+          maxLength={1200}
+          rows={6}
+          placeholder="Your answer..."
+          onChange={(event) => updateValue("penguin_answer", event.target.value)}
+          onBlur={() => onBlur("penguin_answer")}
+          aria-invalid={Boolean(errors.penguin_answer)}
+          aria-describedby={
+            errors.penguin_answer ? "penguin_answer-error" : "penguin_answer-meta"
+          }
+        />
+        <div className="field-meta" id="penguin_answer-meta">
+          <span>There is no correct answer. Probably.</span>
+          <span>{values.penguin_answer.length} / 1200</span>
+        </div>
+        {errors.penguin_answer && (
+          <p className="field-error" id="penguin_answer-error">
+            {errors.penguin_answer}
           </p>
         )}
       </section>

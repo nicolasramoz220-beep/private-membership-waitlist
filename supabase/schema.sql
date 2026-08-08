@@ -19,16 +19,28 @@ create table public.applications (
     constraint applications_how_heard_length check (how_heard is null or char_length(how_heard) <= 80),
   contribution text
     constraint applications_contribution_length check (contribution is null or char_length(contribution) <= 1200),
-  random_question text not null
+  random_question text
     constraint applications_random_question_check check (
       random_question in (
         'What is something you could give a 20-minute presentation about with zero preparation?',
         'You have been given a penguin. You cannot sell it or give it away. What do you do?'
       )
     ),
-  random_answer text not null
+  random_answer text
     constraint applications_random_answer_length check (char_length(random_answer) between 1 and 1200),
-  created_at timestamptz not null default now()
+  presentation_answer text
+    constraint applications_presentation_answer_length check (
+      presentation_answer is null or char_length(presentation_answer) between 1 and 1200
+    ),
+  penguin_answer text
+    constraint applications_penguin_answer_length check (
+      penguin_answer is null or char_length(penguin_answer) between 1 and 1200
+    ),
+  created_at timestamptz not null default now(),
+  constraint applications_answer_version_check check (
+    (presentation_answer is not null and penguin_answer is not null)
+    or (random_question is not null and random_answer is not null)
+  )
 );
 
 create index applications_created_at_idx

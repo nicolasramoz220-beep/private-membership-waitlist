@@ -17,6 +17,11 @@ test("builds a self-contained GitHub Pages site", async () => {
   const script = await readFile(new URL(`../dist-pages/assets/${scripts[0]}`, import.meta.url), "utf8");
   assert.match(script, /Join the waitlist/);
   assert.match(script, /VIP Waitlist/);
+  assert.match(script, /20-minute presentation/);
+  assert.match(script, /You have been given a penguin/);
+  assert.match(script, /Please specify/);
+  assert.match(script, /presentation_answer/);
+  assert.match(script, /penguin_answer/);
   assert.match(script, /supabase\.co/);
   assert.doesNotMatch(script, /service_role|sb_secret_/i);
 });

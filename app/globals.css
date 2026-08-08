@@ -587,6 +587,14 @@ textarea {
   transform: translateY(-50%);
 }
 
+.other-source-field {
+  margin-top: 24px;
+}
+
+.other-source-field .field-label {
+  margin-bottom: 4px;
+}
+
 .field-meta {
   color: var(--stone);
   display: flex;
