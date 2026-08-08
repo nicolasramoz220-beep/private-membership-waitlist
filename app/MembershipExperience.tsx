@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "../lib/supabase";
 
 type ApplicationType = "standard" | "vip";
 type Screen = "home" | "application" | "success";
@@ -428,17 +429,10 @@ function ApplicationForm({
     }
 
     try {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-      if (!supabaseUrl || !publishableKey) {
-        throw new Error("The application service is not configured.");
-      }
-
-      const response = await fetch(`${supabaseUrl}/rest/v1/applications`, {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/applications`, {
         method: "POST",
         headers: {
-          apikey: publishableKey,
+          apikey: SUPABASE_PUBLISHABLE_KEY,
           "Content-Type": "application/json",
           Prefer: "return=minimal",
         },

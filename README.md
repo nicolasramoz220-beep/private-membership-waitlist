@@ -4,9 +4,7 @@ Landing de waitlist premium con dos flujos: solicitud general y solicitud VIP pr
 
 ## Configuración
 
-1. Copia `.env.example` como `.env.local`.
-2. Añade la URL y la publishable key de tu proyecto Supabase. Una publishable key puede usarse en el navegador; nunca uses una `service_role` o secret key aquí.
-3. Si usas otro proyecto Supabase, ejecuta `supabase/schema.sql` una vez desde el SQL Editor.
+La URL y la publishable key están en `lib/supabase.ts`. Una publishable key puede usarse en el navegador porque el acceso real lo controla RLS; nunca uses una `service_role` o secret key aquí. Si usas otro proyecto Supabase, actualiza ese archivo y ejecuta `supabase/schema.sql` una vez desde el SQL Editor.
 
 El PIN VIP está en `app/MembershipExperience.tsx` como `VIP_PIN`. El valor inicial es `1927`; cámbialo antes de compartir la página si lo deseas. Es una barrera estética, no un mecanismo de seguridad.
 
@@ -26,9 +24,15 @@ npm run lint
 npm test
 ```
 
-## Despliegue
+## Despliegue público con GitHub Pages
 
-El proyecto genera una salida compatible con Cloudflare Workers mediante vinext. También puede conectarse a cualquier flujo de despliegue que ejecute `npm install` y `npm run build` y publique `dist/`. Configura las dos variables `NEXT_PUBLIC_SUPABASE_*` durante el build si no utilizas el archivo local.
+El workflow `.github/workflows/deploy-pages.yml` compila y publica automáticamente el sitio en GitHub Pages al hacer push a `main`. La salida estática se puede comprobar localmente con:
+
+```bash
+npm run build:pages
+```
+
+No hay login de GPT ni autenticación de visitantes. El formulario envía directamente a Supabase con la publishable key y las políticas RLS incluidas.
 
 ## Seguridad de datos
 
