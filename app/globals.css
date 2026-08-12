@@ -956,19 +956,19 @@ textarea {
 
 .restricted-entry button {
   align-items: center;
-  background: linear-gradient(125deg, #8f1838 0%, #72132e 58%, #531020 100%);
-  border: 1px solid #c14764;
-  box-shadow: 0 12px 30px rgba(104, 12, 42, 0.24), inset 0 1px 0 rgba(255, 229, 235, 0.14);
+  background: linear-gradient(125deg, #74172f 0%, #5f1428 58%, #45101e 100%);
+  border: 1px solid rgba(184, 61, 90, 0.74);
+  box-shadow: 0 9px 24px rgba(91, 10, 35, 0.2), inset 0 1px 0 rgba(255, 229, 235, 0.11);
   color: #fff7f8;
   cursor: pointer;
   display: flex;
   font-family: inherit;
   justify-content: space-between;
-  min-height: 66px;
-  padding: 13px 16px 13px 18px;
+  min-height: 54px;
+  padding: 10px 13px 10px 15px;
   text-align: left;
   transition: border-color 220ms ease, box-shadow 220ms ease, filter 220ms ease, transform 220ms ease;
-  width: min(100%, 390px);
+  width: min(100%, 315px);
 }
 
 .restricted-entry button:hover,
@@ -983,20 +983,20 @@ textarea {
   align-items: flex-start;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .restricted-entry-copy small {
   color: #f0b8c5;
-  font-size: 0.52rem;
-  letter-spacing: 0.26em;
+  font-size: 0.46rem;
+  letter-spacing: 0.23em;
   text-transform: uppercase;
 }
 
 .restricted-entry-copy strong {
   color: #fffafb;
   font-family: var(--font-display), serif;
-  font-size: clamp(1.08rem, 2vw, 1.3rem);
+  font-size: clamp(0.94rem, 1.7vw, 1.1rem);
   font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1;
@@ -1007,9 +1007,9 @@ textarea {
   border: 1px solid rgba(255, 230, 235, 0.55);
   color: #fff5f7;
   display: flex;
-  flex: 0 0 34px;
-  font-size: 0.82rem;
-  height: 34px;
+  flex: 0 0 29px;
+  font-size: 0.7rem;
+  height: 29px;
   justify-content: center;
 }
 
@@ -1023,8 +1023,8 @@ textarea {
 
 @media (max-width: 700px) {
   .restricted-entry button {
-    min-height: 64px;
-    width: min(100%, 330px);
+    min-height: 54px;
+    width: min(100%, 285px);
   }
 }
 
