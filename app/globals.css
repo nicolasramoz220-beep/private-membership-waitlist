@@ -950,53 +950,54 @@ textarea {
   align-items: flex-end;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 26px;
+  gap: 7px;
+  margin-top: 22px;
 }
 
 .restricted-entry button {
   align-items: center;
-  background: linear-gradient(125deg, #74172f 0%, #5f1428 58%, #45101e 100%);
-  border: 1px solid rgba(184, 61, 90, 0.74);
-  box-shadow: 0 9px 24px rgba(91, 10, 35, 0.2), inset 0 1px 0 rgba(255, 229, 235, 0.11);
+  background: linear-gradient(125deg, #460b1c 0%, #350814 58%, #26060e 100%);
+  border: 1px solid rgba(128, 39, 61, 0.76);
+  box-shadow: 0 7px 18px rgba(48, 4, 18, 0.24), inset 0 1px 0 rgba(255, 229, 235, 0.07);
   color: #fff7f8;
   cursor: pointer;
   display: flex;
   font-family: inherit;
   justify-content: space-between;
-  min-height: 54px;
-  padding: 10px 13px 10px 15px;
+  min-height: 34px;
+  padding: 5px 7px 5px 9px;
+  position: relative;
   text-align: left;
   transition: border-color 220ms ease, box-shadow 220ms ease, filter 220ms ease, transform 220ms ease;
-  width: min(100%, 315px);
+  width: min(100%, 174px);
 }
 
 .restricted-entry button:hover,
 .restricted-entry button:focus-visible {
-  border-color: #ed8da2;
-  box-shadow: 0 15px 36px rgba(130, 15, 51, 0.36), inset 0 1px 0 rgba(255, 239, 242, 0.2);
-  filter: brightness(1.1);
-  transform: translateY(-3px);
+  border-color: #a74860;
+  box-shadow: 0 10px 25px rgba(74, 6, 28, 0.34), inset 0 1px 0 rgba(255, 239, 242, 0.12);
+  filter: brightness(1.18);
+  transform: translateY(-2px);
 }
 
 .restricted-entry-copy {
   align-items: flex-start;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .restricted-entry-copy small {
-  color: #f0b8c5;
-  font-size: 0.46rem;
-  letter-spacing: 0.23em;
+  color: #c98494;
+  font-size: 0.34rem;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
 .restricted-entry-copy strong {
-  color: #fffafb;
+  color: #ead8dc;
   font-family: var(--font-display), serif;
-  font-size: clamp(0.94rem, 1.7vw, 1.1rem);
+  font-size: 0.72rem;
   font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1;
@@ -1004,18 +1005,18 @@ textarea {
 
 .restricted-entry-arrow {
   align-items: center;
-  border: 1px solid rgba(255, 230, 235, 0.55);
-  color: #fff5f7;
+  border: 1px solid rgba(217, 153, 167, 0.36);
+  color: #d49baa;
   display: flex;
-  flex: 0 0 29px;
-  font-size: 0.7rem;
-  height: 29px;
+  flex: 0 0 22px;
+  font-size: 0.58rem;
+  height: 22px;
   justify-content: center;
 }
 
 .restricted-entry > small {
   color: #c77a8d;
-  font-size: 0.58rem;
+  font-size: 0.48rem;
   letter-spacing: 0.2em;
   text-align: right;
   text-transform: uppercase;
@@ -1023,8 +1024,8 @@ textarea {
 
 @media (max-width: 700px) {
   .restricted-entry button {
-    min-height: 54px;
-    width: min(100%, 285px);
+    min-height: 34px;
+    width: min(100%, 174px);
   }
 }
 
