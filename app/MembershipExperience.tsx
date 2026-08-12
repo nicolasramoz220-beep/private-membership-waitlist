@@ -1197,7 +1197,6 @@ function RestrictedDataOverlay({ fast, onClose }: { fast: boolean; onClose: () =
             <div className="restricted-copy">
               <p>According to applicable United States government access records, your current authorization level does not permit access to this information.</p>
               <dl><div><dt>Required clearance</dt><dd>Level IV</dd></div><div><dt>Request status</dt><dd>Closed</dd></div></dl>
-              <small>Fictional interface demonstration. No external records were queried.</small>
             </div>
           </section>
         )}
