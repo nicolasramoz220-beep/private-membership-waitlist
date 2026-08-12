@@ -1,6 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "../lib/supabase";
 
 type ApplicationType = "standard" | "vip";
@@ -16,8 +21,16 @@ type FormValues = {
   how_heard: string;
   how_heard_other: string;
   contribution: string;
-  presentation_answer: string;
-  penguin_answer: string;
+  trustworthiness: string;
+  organization_trust: string;
+  organization_reputation: string;
+  unique_contribution: string;
+  worthy_of_trust: string;
+  three_specific_things: string;
+  presentation_topic: string;
+  giraffe_plan: string;
+  million_dollar_plan: string;
+  nicolas_choice: string;
   website: string;
 };
 
@@ -25,6 +38,8 @@ type FieldName = keyof FormValues;
 type FormErrors = Partial<Record<FieldName, string>>;
 
 const VIP_PIN = "1927";
+const STORAGE_KEY = "private-membership-application-draft";
+const REVIEW_STEP = 10;
 
 const EMPTY_FORM: FormValues = {
   first_name: "",
@@ -36,8 +51,16 @@ const EMPTY_FORM: FormValues = {
   how_heard: "",
   how_heard_other: "",
   contribution: "",
-  presentation_answer: "",
-  penguin_answer: "",
+  trustworthiness: "",
+  organization_trust: "",
+  organization_reputation: "",
+  unique_contribution: "",
+  worthy_of_trust: "",
+  three_specific_things: "",
+  presentation_topic: "",
+  giraffe_plan: "",
+  million_dollar_plan: "",
+  nicolas_choice: "",
   website: "",
 };
 
@@ -49,6 +72,69 @@ const HEARD_OPTIONS = [
   "Word of mouth",
   "Other",
 ];
+
+const STEP_FIELDS: FieldName[][] = [
+  ["first_name", "last_name", "email", "street_address", "zip_code"],
+  ["why_join", "how_heard", "contribution"],
+  ["organization_trust", "organization_reputation"],
+  ["trustworthiness"],
+  ["unique_contribution", "worthy_of_trust"],
+  ["giraffe_plan"],
+  ["three_specific_things"],
+  ["presentation_topic"],
+  ["million_dollar_plan"],
+  ["nicolas_choice"],
+  [],
+];
+
+const STEP_LABELS = [
+  "Identity",
+  "Intent",
+  "The organization",
+  "Trust",
+  "What you bring",
+  "Important question",
+  "Personal detail",
+  "Unexpected expertise",
+  "The scenario",
+  "Be honest",
+  "Review",
+];
+
+const REVIEW_LINES = [
+  ["Checking honesty", "questionable"],
+  ["Reviewing life choices", "concerning"],
+  ["Evaluating giraffe strategy", "surprisingly solid"],
+  ["Checking name quality", "unfortunate"],
+  ["Verifying Nicolas preference", "correct"],
+] as const;
+
+function loadDraft(): {
+  values: FormValues;
+  nameConfirmed: boolean;
+  escapeCount: number;
+} {
+  if (typeof window === "undefined") {
+    return { values: EMPTY_FORM, nameConfirmed: false, escapeCount: 0 };
+  }
+
+  try {
+    const saved = window.sessionStorage.getItem(STORAGE_KEY);
+    if (!saved) return { values: EMPTY_FORM, nameConfirmed: false, escapeCount: 0 };
+    const parsed = JSON.parse(saved) as Partial<{
+      values: Partial<FormValues>;
+      nameConfirmed: boolean;
+      escapeCount: number;
+    }>;
+    return {
+      values: { ...EMPTY_FORM, ...parsed.values, website: "" },
+      nameConfirmed: Boolean(parsed.nameConfirmed),
+      escapeCount: Math.min(2, Math.max(0, parsed.escapeCount || 0)),
+    };
+  } catch {
+    return { values: EMPTY_FORM, nameConfirmed: false, escapeCount: 0 };
+  }
+}
 
 export function MembershipExperience() {
   const [screen, setScreen] = useState<Screen>("home");
@@ -91,9 +177,7 @@ export function MembershipExperience() {
         />
       )}
 
-      {screen === "success" && (
-        <SuccessScreen type={applicationType} onReturn={returnHome} />
-      )}
+      {screen === "success" && <SuccessScreen onReturn={returnHome} />}
     </main>
   );
 }
@@ -128,21 +212,12 @@ function HomeScreen({
         </p>
 
         <div className="choice-grid entrance entrance-5">
-          <button
-            className="choice-card"
-            type="button"
-            onClick={() => onStart("standard")}
-          >
+          <button className="choice-card" type="button" onClick={() => onStart("standard")}>
             <span className="choice-number">01</span>
             <span className="choice-title">Join the waitlist</span>
-            <span className="choice-arrow" aria-hidden="true">
-              ↗
-            </span>
-            <span className="choice-description">
-              Submit your application for consideration.
-            </span>
+            <span className="choice-arrow" aria-hidden="true">↗</span>
+            <span className="choice-description">Submit your application for consideration.</span>
           </button>
-
           <button
             className="choice-card choice-card-vip"
             type="button"
@@ -150,9 +225,7 @@ function HomeScreen({
           >
             <span className="choice-number">02 / Private access</span>
             <span className="choice-title">VIP waitlist</span>
-            <span className="choice-arrow" aria-hidden="true">
-              ↗
-            </span>
+            <span className="choice-arrow" aria-hidden="true">↗</span>
             <span className="choice-description">For invitation holders only.</span>
           </button>
         </div>
@@ -190,12 +263,12 @@ function ApplicationScreen({
         <span className={isVip ? "application-chip is-vip" : "application-chip"}>
           {isVip ? "VIP application" : "General application"}
         </span>
-        <span className="application-count">10 questions</span>
+        <span className="application-count">Private intake / 2026</span>
       </header>
 
       <div className={isVip ? "vip-stage" : undefined}>
         <div
-          className={`application-layout ${isVip && !vipUnlocked ? "is-locked" : ""}`}
+          className={`application-layout application-layout-flow ${isVip && !vipUnlocked ? "is-locked" : ""}`}
           inert={isVip && !vipUnlocked ? true : undefined}
           aria-hidden={isVip && !vipUnlocked}
         >
@@ -205,20 +278,14 @@ function ApplicationScreen({
               {isVip ? "VIP" : "Membership"}
               <span>Application</span>
             </h2>
-            <p>
-              We read every application. Take your time, and answer in your own
-              words.
-            </p>
+            <p>We read every application. Take your time, and answer in your own words.</p>
             <div className="intro-rule" />
             <small>
-              Fields marked <span aria-hidden="true">*</span> are required.
+              All fields are required. Short answers are accepted.
             </small>
           </aside>
 
-          <ApplicationForm
-            applicationType={applicationType}
-            onSuccess={onSuccess}
-          />
+          <ApplicationFlow applicationType={applicationType} onSuccess={onSuccess} />
         </div>
 
         {isVip && !vipUnlocked && <VipLock onUnlock={onUnlock} />}
@@ -240,14 +307,12 @@ function VipLock({ onUnlock }: { onUnlock: () => void }) {
   const unlock = (event: FormEvent) => {
     event.preventDefault();
     if (unlocking) return;
-
     if (pin !== VIP_PIN) {
       setError(true);
       setPin("");
       inputRef.current?.focus();
       return;
     }
-
     setError(false);
     setUnlocking(true);
     window.setTimeout(onUnlock, 620);
@@ -257,15 +322,11 @@ function VipLock({ onUnlock }: { onUnlock: () => void }) {
     <div className={`vip-lock ${unlocking ? "is-unlocking" : ""}`}>
       <div className="lock-halo" aria-hidden="true" />
       <form className="lock-card" onSubmit={unlock} noValidate>
-        <div className="lock-seal" aria-hidden="true">
-          VIP
-        </div>
+        <div className="lock-seal" aria-hidden="true">VIP</div>
         <p className="eyebrow">Private access</p>
         <h2>VIP Waitlist</h2>
         <p className="lock-instruction">Enter your invitation PIN.</p>
-        <label className="sr-only" htmlFor="vip-pin">
-          Four digit invitation PIN
-        </label>
+        <label className="sr-only" htmlFor="vip-pin">Four digit invitation PIN</label>
         <input
           ref={inputRef}
           id="vip-pin"
@@ -302,100 +363,207 @@ function VipLock({ onUnlock }: { onUnlock: () => void }) {
   );
 }
 
-function ApplicationForm({
+function ApplicationFlow({
   applicationType,
   onSuccess,
 }: {
   applicationType: ApplicationType;
   onSuccess: () => void;
 }) {
-  const [values, setValues] = useState<FormValues>(EMPTY_FORM);
+  const [initialDraft] = useState(() => loadDraft());
+  const [values, setValues] = useState<FormValues>(initialDraft.values);
+  const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [validationMessage, setValidationMessage] = useState("");
+  const [stepReaction, setStepReaction] = useState("");
+  const [nameConfirmed, setNameConfirmed] = useState(initialDraft.nameConfirmed);
+  const [nameModal, setNameModal] = useState<"closed" | "confirm" | "accepted">("closed");
+  const [kingAttempts, setKingAttempts] = useState(0);
+  const [kingReaction, setKingReaction] = useState("");
+  const [escapeCount, setEscapeCount] = useState(initialDraft.escapeCount);
+  const [escapeReaction, setEscapeReaction] = useState("");
+  const [reviewIndex, setReviewIndex] = useState(0);
+  const [reviewReady, setReviewReady] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const requiredNames = useMemo<FieldName[]>(
-    () => [
-      "first_name",
-      "last_name",
-      "email",
-      "street_address",
-      "zip_code",
-      "presentation_answer",
-      "penguin_answer",
-    ],
-    [],
-  );
+  const validationAttemptsRef = useRef<Record<number, number>>({});
+  const completedStepsRef = useRef(new Set<number>());
+  const editedFieldsRef = useRef<Partial<Record<FieldName, number>>>({});
+  const reactionTimerRef = useRef<number | null>(null);
+  const reviewTimersRef = useRef<number[]>([]);
+  const nameTimerRef = useRef<number | null>(null);
 
-  const validateField = (name: FieldName, value: string) => {
-    const cleanValue = value.trim();
-    if (requiredNames.includes(name) && !cleanValue) return "This field is required.";
-    if (name === "how_heard_other" && values.how_heard === "Other" && !cleanValue) {
-      return "Please tell us how you heard about us.";
-    }
-    if (
-      name === "email" &&
-      cleanValue &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(cleanValue)
-    ) {
-      return "Enter a valid email address.";
-    }
-    const maxLengths: Partial<Record<FieldName, number>> = {
-      first_name: 80,
-      last_name: 80,
-      email: 320,
-      street_address: 200,
-      zip_code: 20,
-      why_join: 1200,
-      how_heard: 80,
-      how_heard_other: 72,
-      contribution: 1200,
-      presentation_answer: 1200,
-      penguin_answer: 1200,
+  useEffect(() => {
+    window.sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ values: { ...values, website: "" }, nameConfirmed, escapeCount }),
+    );
+  }, [values, nameConfirmed, escapeCount]);
+
+  useEffect(() => {
+    return () => {
+      if (reactionTimerRef.current) window.clearTimeout(reactionTimerRef.current);
+      if (nameTimerRef.current) window.clearTimeout(nameTimerRef.current);
+      reviewTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     };
-    const max = maxLengths[name];
-    if (max && value.length > max) return `Keep this answer under ${max} characters.`;
-    return "";
+  }, []);
+
+  const showReaction = (message: string) => {
+    setStepReaction(message);
+    if (reactionTimerRef.current) window.clearTimeout(reactionTimerRef.current);
+    reactionTimerRef.current = window.setTimeout(() => setStepReaction(""), 2800);
   };
 
   const updateValue = (name: FieldName, value: string) => {
+    const oldValue = values[name];
     setValues((current) => ({ ...current, [name]: value }));
+    setSubmitError("");
+
     if (errors[name]) {
-      setErrors((current) => ({ ...current, [name]: validateField(name, value) }));
+      setErrors((current) => ({ ...current, [name]: "" }));
     }
-    if (submitError) setSubmitError("");
+
+    if (name === "first_name" && oldValue !== value && nameConfirmed) {
+      setNameConfirmed(false);
+    }
+
+    const fieldStep = STEP_FIELDS.findIndex((fields) => fields.includes(name));
+    if (oldValue && oldValue !== value && completedStepsRef.current.has(fieldStep)) {
+      const edits = (editedFieldsRef.current[name] || 0) + 1;
+      editedFieldsRef.current[name] = edits;
+      if (edits === 1) showReaction("Interesting. Changing the story already.");
+      if (edits === 2) showReaction("This story keeps evolving.");
+    }
   };
 
-  const onBlur = (name: FieldName) => {
-    const message = validateField(name, values[name]);
-    setErrors((current) => ({ ...current, [name]: message }));
+  const validateField = (name: FieldName, value: string) => {
+    const clean = value.trim();
+    if (!clean) return "This field is required.";
+    if (name === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(clean)) {
+      return "Enter a valid email address.";
+    }
+    return "";
   };
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (isSubmitting) return;
+  const validateStep = (stepToValidate: number) => {
+    const fields = [...STEP_FIELDS[stepToValidate]];
+    if (stepToValidate === 1 && values.how_heard === "Other") {
+      fields.push("how_heard_other");
+    }
 
     const nextErrors: FormErrors = {};
-    (Object.keys(values) as FieldName[]).forEach((name) => {
-      if (name !== "website") {
-        const message = validateField(name, values[name]);
-        if (message) nextErrors[name] = message;
-      }
+    fields.forEach((name) => {
+      const message = validateField(name, values[name]);
+      if (message) nextErrors[name] = message;
     });
 
-    if (Object.keys(nextErrors).length > 0) {
-      setErrors(nextErrors);
-      const firstInvalid = event.currentTarget.querySelector<HTMLElement>(
-        "[aria-invalid='true']",
-      );
-      firstInvalid?.focus();
-      return;
+    if (Object.keys(nextErrors).length === 0) {
+      setErrors({});
+      setValidationMessage("");
+      return true;
     }
 
+    const attempt = (validationAttemptsRef.current[stepToValidate] || 0) + 1;
+    validationAttemptsRef.current[stepToValidate] = attempt;
+    const playful = ["You forgot something.", "You had one job.", "We literally just talked about this."];
+    const message = playful[attempt - 1] || "Complete the required fields.";
+    setErrors(nextErrors);
+    setValidationMessage(message);
+
+    window.requestAnimationFrame(() => {
+      const firstName = Object.keys(nextErrors)[0];
+      document.getElementById(firstName)?.focus();
+      document.getElementById(firstName)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    return false;
+  };
+
+  const moveToStep = (nextStep: number) => {
+    setStep(nextStep);
+    setErrors({});
+    setValidationMessage("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const continueAfterName = () => {
+    setNameConfirmed(true);
+    setNameModal("accepted");
+    nameTimerRef.current = window.setTimeout(() => {
+      setNameModal("closed");
+      completedStepsRef.current.add(0);
+      moveToStep(1);
+    }, 950);
+  };
+
+  const beginReview = () => {
+    moveToStep(REVIEW_STEP);
+    setReviewIndex(0);
+    setReviewReady(false);
+    reviewTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    reviewTimersRef.current = REVIEW_LINES.map((_, index) =>
+      window.setTimeout(() => setReviewIndex(index + 1), 350 + index * 430),
+    );
+    reviewTimersRef.current.push(window.setTimeout(() => setReviewReady(true), 2850));
+  };
+
+  const goNext = () => {
+    if (!validateStep(step)) return;
+    if (step === 0 && !nameConfirmed) {
+      setNameModal("confirm");
+      return;
+    }
+    completedStepsRef.current.add(step);
+    if (step === 9) {
+      beginReview();
+      return;
+    }
+    moveToStep(Math.min(REVIEW_STEP, step + 1));
+  };
+
+  const handleContinue = () => {
+    if (step === 5 && escapeCount < 2) {
+      const nextCount = escapeCount + 1;
+      setEscapeCount(nextCount);
+      setEscapeReaction(nextCount === 1 ? "Too slow." : "Oof... almost.");
+      return;
+    }
+    goNext();
+  };
+
+  const goBack = () => {
+    if (step <= 0) return;
+    if (step === REVIEW_STEP) {
+      reviewTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+      setReviewReady(false);
+    }
+    showReaction("Having second thoughts?");
+    moveToStep(step - 1);
+  };
+
+  const chooseKing = (choice: "applicant" | "nicolas") => {
+    if (choice === "nicolas") {
+      updateValue("nicolas_choice", "King Nicolas");
+      setKingReaction("Finally, an intelligent answer.");
+      return;
+    }
+    const attempts = kingAttempts + 1;
+    setKingAttempts(attempts);
+    setValues((current) => ({ ...current, nicolas_choice: "" }));
+    setKingReaction(
+      attempts === 1
+        ? "Keep dreaming."
+        : "Confidence is admirable. Delusion isn't.",
+    );
+  };
+
+  const submitApplication = async () => {
+    if (isSubmitting || !reviewReady) return;
     setIsSubmitting(true);
     setSubmitError("");
 
     if (values.website) {
-      window.setTimeout(onSuccess, 500);
+      window.sessionStorage.removeItem(STORAGE_KEY);
+      window.setTimeout(onSuccess, 400);
       return;
     }
 
@@ -414,34 +582,41 @@ function ApplicationForm({
           email: values.email.trim().toLowerCase(),
           street_address: values.street_address.trim(),
           zip_code: values.zip_code.trim(),
-          why_join: values.why_join.trim() || null,
+          why_join: values.why_join.trim(),
           how_heard:
             values.how_heard === "Other"
               ? `Other: ${values.how_heard_other.trim()}`
-              : values.how_heard || null,
-          contribution: values.contribution.trim() || null,
-          presentation_answer: values.presentation_answer.trim(),
-          penguin_answer: values.penguin_answer.trim(),
+              : values.how_heard,
+          contribution: values.contribution.trim(),
+          trustworthiness: Number(values.trustworthiness),
+          organization_trust: values.organization_trust.trim(),
+          organization_reputation: values.organization_reputation.trim(),
+          unique_contribution: values.unique_contribution.trim(),
+          worthy_of_trust: values.worthy_of_trust.trim(),
+          three_specific_things: values.three_specific_things.trim(),
+          presentation_topic: values.presentation_topic.trim(),
+          giraffe_plan: values.giraffe_plan.trim(),
+          million_dollar_plan: values.million_dollar_plan.trim(),
+          nicolas_choice: values.nicolas_choice,
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("We could not submit your application at this time.");
-      }
-
+      if (!response.ok) throw new Error("We could not submit your application at this time.");
+      window.sessionStorage.removeItem(STORAGE_KEY);
       onSuccess();
     } catch (error) {
       setSubmitError(
-        error instanceof Error
-          ? error.message
-          : "We could not submit your application at this time.",
+        error instanceof Error ? error.message : "We could not submit your application at this time.",
       );
       setIsSubmitting(false);
     }
   };
 
+  const firstName = values.first_name.trim() || "You";
+  const escapeOffset = escapeCount === 1 ? "escape-right" : escapeCount === 2 ? "escape-left" : "";
+
   return (
-    <form className="application-form" onSubmit={submit} noValidate>
+    <form className="application-form application-flow" onSubmit={(event) => event.preventDefault()} noValidate>
       <div className="honeypot" aria-hidden="true">
         <label htmlFor="website">Website</label>
         <input
@@ -455,251 +630,193 @@ function ApplicationForm({
         />
       </div>
 
-      <div className="field-pair">
-        <FormField
-          number="01"
-          label="First Name"
-          name="first_name"
-          required
-          value={values.first_name}
-          error={errors.first_name}
-          autoComplete="given-name"
-          onChange={updateValue}
-          onBlur={onBlur}
-        />
-        <FormField
-          number="02"
-          label="Last Name"
-          name="last_name"
-          required
-          value={values.last_name}
-          error={errors.last_name}
-          autoComplete="family-name"
-          onChange={updateValue}
-          onBlur={onBlur}
-        />
+      <div className="flow-progress" aria-label={`Step ${step + 1} of ${STEP_LABELS.length}`}>
+        <span>{String(step + 1).padStart(2, "0")} / {String(STEP_LABELS.length).padStart(2, "0")}</span>
+        <span>{STEP_LABELS[step]}</span>
+        <div className="progress-track" aria-hidden="true">
+          <span style={{ width: `${((step + 1) / STEP_LABELS.length) * 100}%` }} />
+        </div>
       </div>
 
-      <FormField
-        number="03"
-        label="Email Address"
-        name="email"
-        type="email"
-        required
-        value={values.email}
-        error={errors.email}
-        autoComplete="email"
-        inputMode="email"
-        onChange={updateValue}
-        onBlur={onBlur}
-      />
-
-      <FormField
-        number="04"
-        label="Street Address"
-        name="street_address"
-        required
-        value={values.street_address}
-        error={errors.street_address}
-        autoComplete="street-address"
-        onChange={updateValue}
-        onBlur={onBlur}
-      />
-
-      <FormField
-        number="05"
-        label="ZIP Code"
-        name="zip_code"
-        required
-        value={values.zip_code}
-        error={errors.zip_code}
-        autoComplete="postal-code"
-        inputMode="text"
-        onChange={updateValue}
-        onBlur={onBlur}
-      />
-
-      <TextareaField
-        number="06"
-        label="Why do you want to be part of this community?"
-        name="why_join"
-        value={values.why_join}
-        error={errors.why_join}
-        maxLength={1200}
-        onChange={updateValue}
-        onBlur={onBlur}
-      />
-
-      <div className="field-block">
-        <label className="field-label" htmlFor="how_heard">
-          <span className="field-number">07</span>
-          <span>How did you hear about us?</span>
-        </label>
-        <div className="select-wrap">
-          <select
-            id="how_heard"
-            name="how_heard"
-            value={values.how_heard}
-            onChange={(event) => {
-              updateValue("how_heard", event.target.value);
-              if (event.target.value !== "Other") {
-                updateValue("how_heard_other", "");
-              }
-            }}
-            onBlur={() => onBlur("how_heard")}
-            aria-invalid={Boolean(errors.how_heard)}
-            aria-describedby={errors.how_heard ? "how_heard-error" : undefined}
-          >
-            <option value="">Select an option</option>
-            {HEARD_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-          <span aria-hidden="true">↓</span>
-        </div>
-        {errors.how_heard && (
-          <p className="field-error" id="how_heard-error">
-            {errors.how_heard}
-          </p>
+      <div key={step} className="step-panel">
+        {step === 0 && (
+          <>
+            <StepHeading eyebrow="01 — Basic information" title="Tell us who you are." />
+            <div className="field-pair">
+              <FormField number="01" label="First Name" name="first_name" value={values.first_name} error={errors.first_name} autoComplete="given-name" onChange={updateValue} />
+              <FormField number="02" label="Last Name" name="last_name" value={values.last_name} error={errors.last_name} autoComplete="family-name" onChange={updateValue} />
+            </div>
+            <FormField number="03" label="Email Address" name="email" type="email" value={values.email} error={errors.email} autoComplete="email" inputMode="email" onChange={updateValue} />
+            <FormField number="04" label="Street Address" name="street_address" value={values.street_address} error={errors.street_address} autoComplete="street-address" onChange={updateValue} />
+            <FormField number="05" label="ZIP Code" name="zip_code" value={values.zip_code} error={errors.zip_code} autoComplete="postal-code" onChange={updateValue} />
+          </>
         )}
-        {values.how_heard === "Other" && (
-          <div className="other-source-field">
-            <label className="field-label" htmlFor="how_heard_other">
-              <span>Please specify</span>
-              <span className="required-mark"> *</span>
-            </label>
-            <input
-              id="how_heard_other"
-              name="how_heard_other"
-              type="text"
-              value={values.how_heard_other}
-              maxLength={72}
-              placeholder="Tell us where you found us"
-              onChange={(event) => updateValue("how_heard_other", event.target.value)}
-              onBlur={() => onBlur("how_heard_other")}
-              aria-invalid={Boolean(errors.how_heard_other)}
-              aria-describedby={
-                errors.how_heard_other ? "how_heard_other-error" : undefined
-              }
-            />
-            {errors.how_heard_other && (
-              <p className="field-error" id="how_heard_other-error">
-                {errors.how_heard_other}
-              </p>
-            )}
+
+        {step === 1 && (
+          <>
+            <StepHeading eyebrow="02 — Intent" title="A little context." />
+            <TextareaField label="Why do you want to be part of this community?" name="why_join" value={values.why_join} error={errors.why_join} reaction={answerReaction(values.why_join)} onChange={updateValue} />
+            <div className="field-block">
+              <label className="field-label" htmlFor="how_heard"><span>How did you hear about us?</span><span className="required-mark"> *</span></label>
+              <div className="select-wrap">
+                <select
+                  id="how_heard"
+                  name="how_heard"
+                  value={values.how_heard}
+                  onChange={(event) => {
+                    updateValue("how_heard", event.target.value);
+                    if (event.target.value !== "Other") updateValue("how_heard_other", "");
+                  }}
+                  aria-invalid={Boolean(errors.how_heard)}
+                  aria-describedby={errors.how_heard ? "how_heard-error" : undefined}
+                >
+                  <option value="">Select an option</option>
+                  {HEARD_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+                <span aria-hidden="true">↓</span>
+              </div>
+              {errors.how_heard && <p className="field-error" id="how_heard-error">{errors.how_heard}</p>}
+              {values.how_heard === "Other" && (
+                <div className="other-source-field">
+                  <FormField label="Please specify" name="how_heard_other" value={values.how_heard_other} error={errors.how_heard_other} onChange={updateValue} />
+                </div>
+              )}
+            </div>
+            <TextareaField label="How would you contribute to the group?" name="contribution" value={values.contribution} error={errors.contribution} reaction={answerReaction(values.contribution)} onChange={updateValue} />
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <StepHeading eyebrow="03 — The organization" title="Trust is earned slowly." />
+            <TextareaField label="You’re invited into a private group where not everything is explained immediately. What would make you trust the people inside enough to stay?" name="organization_trust" value={values.organization_trust} error={errors.organization_trust} onChange={updateValue} />
+            <TextareaField label="Imagine you’ve been part of this organization for a year. What would you want the other members to know you for?" name="organization_reputation" value={values.organization_reputation} error={errors.organization_reputation} onChange={updateValue} />
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            <StepHeading eyebrow="04 — Trust" title="On a scale from 1–10, how trustworthy are you?" />
+            <TrustScale value={values.trustworthiness} error={errors.trustworthiness} onChange={(value) => updateValue("trustworthiness", value)} />
+          </>
+        )}
+
+        {step === 4 && (
+          <>
+            <StepHeading eyebrow="05 — What you bring" title="Every member changes the room." />
+            <TextareaField label="Every member of this organization is expected to bring something others don’t. What would people eventually realize you bring to the room?" name="unique_contribution" value={values.unique_contribution} error={errors.unique_contribution} onChange={updateValue} />
+            <TextareaField label="If this organization trusted you with something important that nobody else could know, what would make you worthy of that trust?" name="worthy_of_trust" value={values.worthy_of_trust} error={errors.worthy_of_trust} onChange={updateValue} />
+          </>
+        )}
+
+        {step === 5 && (
+          <>
+            <StepHeading eyebrow="Important question" title="You have 30 minutes to hide a giraffe from the government." subtitle="What’s your plan?" />
+            <TextareaField label="Your giraffe strategy" name="giraffe_plan" value={values.giraffe_plan} error={errors.giraffe_plan} reaction={giraffeReaction(values.giraffe_plan)} onChange={updateValue} spacious />
+          </>
+        )}
+
+        {step === 6 && (
+          <>
+            <StepHeading eyebrow="07 — Personal detail" title="Specifics reveal more than adjectives." />
+            <TextareaField label="If someone who knows you really well had to describe you using only three very specific things you do, what would they say?" name="three_specific_things" value={values.three_specific_things} error={errors.three_specific_things} reaction={answerReaction(values.three_specific_things)} onChange={updateValue} />
+          </>
+        )}
+
+        {step === 7 && (
+          <>
+            <StepHeading eyebrow="08 — Unexpected expertise" title="What is something you could give a 20-minute presentation about with zero preparation?" />
+            <TextareaField label="Your topic" name="presentation_topic" value={values.presentation_topic} error={errors.presentation_topic} onChange={updateValue} spacious />
+          </>
+        )}
+
+        {step === 8 && (
+          <>
+            <StepHeading eyebrow="09 — The scenario" title="You wake up tomorrow with $1,000,000 in your bank account." subtitle="No explanation. No sender. No message. The only note says: “You have 24 hours. Make it count.” After 24 hours, whatever money is still in the account disappears. What’s your plan?" />
+            <TextareaField label="Your plan" name="million_dollar_plan" value={values.million_dollar_plan} error={errors.million_dollar_plan} onChange={updateValue} spacious />
+          </>
+        )}
+
+        {step === 9 && (
+          <KingNicolas
+            firstName={firstName}
+            selected={values.nicolas_choice === "King Nicolas"}
+            reaction={kingReaction}
+            onChoose={chooseKing}
+          />
+        )}
+
+        {step === REVIEW_STEP && (
+          <ReviewPanel visibleLines={reviewIndex} ready={reviewReady} />
+        )}
+      </div>
+
+      <div className="flow-live-region" aria-live="polite">
+        {validationMessage || stepReaction || escapeReaction}
+      </div>
+      {validationMessage && <p className="validation-banner" role="alert">{validationMessage}</p>}
+
+      {step < REVIEW_STEP && (
+        <div className="flow-navigation">
+          <button className="text-button flow-back" type="button" onClick={goBack} disabled={step === 0}>
+            <span aria-hidden="true">←</span> Back
+          </button>
+          <div className="continue-wrap">
+            {step === 5 && escapeReaction && <span className="escape-reaction" aria-live="polite">{escapeReaction}</span>}
+            <button
+              className={`primary-button continue-button ${step === 5 ? escapeOffset : ""}`}
+              type="button"
+              onClick={handleContinue}
+              disabled={step === 9 && values.nicolas_choice !== "King Nicolas"}
+            >
+              <span>Continue</span><span aria-hidden="true">→</span>
+            </button>
           </div>
-        )}
-      </div>
-
-      <TextareaField
-        number="08"
-        label="How would you contribute to the group?"
-        name="contribution"
-        value={values.contribution}
-        error={errors.contribution}
-        maxLength={1200}
-        onChange={updateValue}
-        onBlur={onBlur}
-      />
-
-      <section className="last-thing" aria-labelledby="last-thing-heading">
-        <p className="eyebrow" id="last-thing-heading">
-          09 — One last thing
-        </p>
-        <p className="random-question">
-          What is something you could give a <em>20-minute presentation</em> about
-          with zero preparation?
-        </p>
-        <label className="sr-only" htmlFor="presentation_answer">
-          Your answer to: What is something you could give a 20-minute presentation
-          about with zero preparation?
-        </label>
-        <textarea
-          id="presentation_answer"
-          name="presentation_answer"
-          value={values.presentation_answer}
-          maxLength={1200}
-          rows={6}
-          placeholder="Your answer..."
-          onChange={(event) => updateValue("presentation_answer", event.target.value)}
-          onBlur={() => onBlur("presentation_answer")}
-          aria-invalid={Boolean(errors.presentation_answer)}
-          aria-describedby={
-            errors.presentation_answer
-              ? "presentation_answer-error"
-              : "presentation_answer-meta"
-          }
-        />
-        <div className="field-meta" id="presentation_answer-meta">
-          <span>Required</span>
-          <span>{values.presentation_answer.length} / 1200</span>
         </div>
-        {errors.presentation_answer && (
-          <p className="field-error" id="presentation_answer-error">
-            {errors.presentation_answer}
-          </p>
-        )}
-      </section>
-
-      <section className="last-thing" aria-labelledby="penguin-heading">
-        <p className="eyebrow" id="penguin-heading">
-          10 — Final question
-        </p>
-        <p className="random-question">
-          You have been given a penguin. You cannot sell it or give it away.
-          <em>What do you do?</em>
-        </p>
-        <label className="sr-only" htmlFor="penguin_answer">
-          Your answer to: You have been given a penguin. You cannot sell it or give
-          it away. What do you do?
-        </label>
-        <textarea
-          id="penguin_answer"
-          name="penguin_answer"
-          value={values.penguin_answer}
-          maxLength={1200}
-          rows={6}
-          placeholder="Your answer..."
-          onChange={(event) => updateValue("penguin_answer", event.target.value)}
-          onBlur={() => onBlur("penguin_answer")}
-          aria-invalid={Boolean(errors.penguin_answer)}
-          aria-describedby={
-            errors.penguin_answer ? "penguin_answer-error" : "penguin_answer-meta"
-          }
-        />
-        <div className="field-meta" id="penguin_answer-meta">
-          <span>There is no correct answer. Probably.</span>
-          <span>{values.penguin_answer.length} / 1200</span>
-        </div>
-        {errors.penguin_answer && (
-          <p className="field-error" id="penguin_answer-error">
-            {errors.penguin_answer}
-          </p>
-        )}
-      </section>
-
-      {submitError && (
-        <p className="submit-error" role="alert">
-          {submitError} Please try again.
-        </p>
       )}
 
-      <div className="submit-row">
-        <p>
-          By submitting, you confirm that the information provided is accurate.
-        </p>
-        <button className="primary-button submit-button" type="submit" disabled={isSubmitting}>
-          <span>{isSubmitting ? "Submitting" : "Submit application"}</span>
-          {isSubmitting ? (
-            <span className="spinner" aria-hidden="true" />
-          ) : (
-            <span aria-hidden="true">↗</span>
-          )}
-        </button>
-      </div>
+      {step === REVIEW_STEP && reviewReady && (
+        <div className="submit-row review-submit-row">
+          <button className="text-button" type="button" onClick={goBack}><span aria-hidden="true">←</span> Review answers</button>
+          <button className="primary-button submit-button" type="button" onClick={submitApplication} disabled={isSubmitting}>
+            <span>{isSubmitting ? "Submitting" : "Submit application"}</span>
+            {isSubmitting ? <span className="spinner" aria-hidden="true" /> : <span aria-hidden="true">↗</span>}
+          </button>
+        </div>
+      )}
+
+      {submitError && <p className="submit-error" role="alert">{submitError} Please try again.</p>}
+
+      {nameModal !== "closed" && (
+        <NameConfirmationModal
+          firstName={firstName}
+          accepted={nameModal === "accepted"}
+          onAccept={continueAfterName}
+          onFix={() => {
+            setNameModal("closed");
+            window.setTimeout(() => document.getElementById("first_name")?.focus(), 20);
+          }}
+        />
+      )}
     </form>
+  );
+}
+
+function StepHeading({
+  eyebrow,
+  title,
+  subtitle,
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <header className="step-heading">
+      <p className="eyebrow">{eyebrow}</p>
+      <h3>{title}</h3>
+      {subtitle && <p>{subtitle}</p>}
+    </header>
   );
 }
 
@@ -709,145 +826,243 @@ function FormField({
   name,
   value,
   error,
-  required,
   type = "text",
   autoComplete,
   inputMode,
   onChange,
-  onBlur,
 }: {
-  number: string;
+  number?: string;
   label: string;
   name: FieldName;
   value: string;
   error?: string;
-  required?: boolean;
   type?: string;
   autoComplete?: string;
   inputMode?: "text" | "email";
   onChange: (name: FieldName, value: string) => void;
-  onBlur: (name: FieldName) => void;
 }) {
   const errorId = `${name}-error`;
+  const maxLength = name === "email" ? 320 : name === "street_address" ? 200 : name === "zip_code" ? 20 : name === "how_heard_other" ? 72 : 80;
   return (
     <div className="field-block">
       <label className="field-label" htmlFor={name}>
-        <span className="field-number">{number}</span>
-        <span>
-          {label}
-          {required && <span className="required-mark"> *</span>}
-        </span>
+        {number && <span className="field-number">{number}</span>}
+        <span>{label}<span className="required-mark"> *</span></span>
       </label>
       <input
         id={name}
         name={name}
         type={type}
         value={value}
-        required={required}
+        required
         autoComplete={autoComplete}
         inputMode={inputMode}
-        maxLength={name === "email" ? 320 : name === "street_address" ? 200 : name === "zip_code" ? 20 : 80}
+        maxLength={maxLength}
         onChange={(event) => onChange(name, event.target.value)}
-        onBlur={() => onBlur(name)}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? errorId : undefined}
       />
-      {error && (
-        <p className="field-error" id={errorId}>
-          {error}
-        </p>
-      )}
+      {error && <p className="field-error" id={errorId}>{error}</p>}
     </div>
   );
 }
 
 function TextareaField({
-  number,
   label,
   name,
   value,
   error,
-  maxLength,
+  reaction,
+  spacious,
   onChange,
-  onBlur,
 }: {
-  number: string;
   label: string;
-  name: "why_join" | "contribution";
+  name: FieldName;
   value: string;
   error?: string;
-  maxLength: number;
+  reaction?: string;
+  spacious?: boolean;
   onChange: (name: FieldName, value: string) => void;
-  onBlur: (name: FieldName) => void;
 }) {
   const errorId = `${name}-error`;
   const metaId = `${name}-meta`;
   return (
-    <div className="field-block">
+    <div className={`field-block textarea-block ${spacious ? "is-spacious" : ""}`}>
       <label className="field-label" htmlFor={name}>
-        <span className="field-number">{number}</span>
-        <span>{label}</span>
+        <span>{label}<span className="required-mark"> *</span></span>
       </label>
       <textarea
         id={name}
         name={name}
         value={value}
-        maxLength={maxLength}
-        rows={5}
+        required
+        maxLength={1200}
+        rows={spacious ? 8 : 6}
+        placeholder="Your answer..."
         onChange={(event) => onChange(name, event.target.value)}
-        onBlur={() => onBlur(name)}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? errorId : metaId}
       />
       <div className="field-meta" id={metaId}>
-        <span>Optional</span>
-        <span>{value.length} / {maxLength}</span>
+        <span className={reaction ? "answer-reaction is-visible" : "answer-reaction"}>{reaction || "Required"}</span>
+        <span>{value.length} / 1200</span>
       </div>
-      {error && (
-        <p className="field-error" id={errorId}>
-          {error}
-        </p>
-      )}
+      {error && <p className="field-error" id={errorId}>{error}</p>}
     </div>
   );
 }
 
-function SuccessScreen({
-  type,
-  onReturn,
+function TrustScale({
+  value,
+  error,
+  onChange,
 }: {
-  type: ApplicationType;
-  onReturn: () => void;
+  value: string;
+  error?: string;
+  onChange: (value: string) => void;
 }) {
-  const isVip = type === "vip";
+  const numericValue = Number(value);
+  const reaction = !value
+    ? ""
+    : numericValue <= 3
+      ? "At least you're honest."
+      : numericValue <= 6
+        ? "That's slightly concerning."
+        : numericValue <= 9
+          ? "We'll keep an eye on you."
+          : "Exactly what an untrustworthy person would say.";
+
+  return (
+    <fieldset className="trust-scale" id="trustworthiness" tabIndex={-1} aria-describedby={error ? "trustworthiness-error" : "trustworthiness-reaction"}>
+      <legend className="sr-only">Choose a trustworthiness value from 1 to 10</legend>
+      <div className="trust-numbers">
+        {Array.from({ length: 10 }, (_, index) => String(index + 1)).map((number) => (
+          <button
+            key={number}
+            className={value === number ? "trust-number is-selected" : "trust-number"}
+            type="button"
+            aria-pressed={value === number}
+            onClick={() => onChange(number)}
+          >
+            {number}
+          </button>
+        ))}
+      </div>
+      <div className="trust-labels" aria-hidden="true"><span>Noted</span><span>Very convincing</span></div>
+      <p className="trust-reaction" id="trustworthiness-reaction" aria-live="polite">{reaction}</p>
+      {error && <p className="field-error" id="trustworthiness-error">{error}</p>}
+    </fieldset>
+  );
+}
+
+function KingNicolas({
+  firstName,
+  selected,
+  reaction,
+  onChoose,
+}: {
+  firstName: string;
+  selected: boolean;
+  reaction: string;
+  onChoose: (choice: "applicant" | "nicolas") => void;
+}) {
+  return (
+    <section className="king-question" aria-labelledby="king-heading">
+      <p className="eyebrow">10 — Be honest</p>
+      <h3 id="king-heading">Who’s better?</h3>
+      <div className="king-options">
+        <button type="button" onClick={() => onChoose("applicant")}>{firstName}</button>
+        <button className={selected ? "is-selected" : ""} type="button" onClick={() => onChoose("nicolas")}>King Nicolas 😎</button>
+      </div>
+      <p className="king-reaction" aria-live="polite">{reaction}</p>
+    </section>
+  );
+}
+
+function NameConfirmationModal({
+  firstName,
+  accepted,
+  onAccept,
+  onFix,
+}: {
+  firstName: string;
+  accepted: boolean;
+  onAccept: () => void;
+  onFix: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="name-modal" role="dialog" aria-modal="true" aria-labelledby="name-modal-title">
+        <p className="eyebrow">Identity confirmation</p>
+        {accepted ? (
+          <div className="name-modal-accepted" aria-live="polite">
+            <h3>Fair enough.</h3>
+            <p>We all have problems.</p>
+          </div>
+        ) : (
+          <>
+            <h3 id="name-modal-title">{firstName.toUpperCase()}?</h3>
+            <p>Are you sure you want to use that ugly name?</p>
+            <div className="modal-actions">
+              <button className="primary-button" type="button" onClick={onAccept}>Yes, I have no choice</button>
+              <button className="secondary-button" type="button" onClick={onFix}>Let me fix it</button>
+            </div>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function ReviewPanel({ visibleLines, ready }: { visibleLines: number; ready: boolean }) {
+  return (
+    <section className="review-panel" aria-labelledby="review-heading">
+      <p className="eyebrow">Final review</p>
+      <h3 id="review-heading">{ready ? "Application ready." : "Reviewing application..."}</h3>
+      <p className="review-disclaimer">A brief ceremonial review. No artificial intelligence, judgment, or acceptance decision is involved.</p>
+      <div className="review-lines" aria-live="polite">
+        {REVIEW_LINES.map(([label, result], index) => (
+          <div className={index < visibleLines ? "review-line is-visible" : "review-line"} key={label}>
+            <span>{label}</span><i aria-hidden="true" /><strong>{result}</strong>
+          </div>
+        ))}
+      </div>
+      <p className={ready ? "review-final is-visible" : "review-final"}>Finalizing complete.</p>
+    </section>
+  );
+}
+
+function answerReaction(value: string) {
+  const length = value.trim().length;
+  if (!length) return "";
+  if (length < 24) return "Wow. Really poured your heart into that one.";
+  if (length > 850) return "Okay Shakespeare, that's enough.";
+  return "";
+}
+
+function giraffeReaction(value: string) {
+  const length = value.trim().length;
+  if (!length) return "";
+  return length < 100
+    ? "The giraffe is definitely getting caught."
+    : "You've thought about this before, haven't you?";
+}
+
+function SuccessScreen({ onReturn }: { onReturn: () => void }) {
   return (
     <section className="success-screen" aria-labelledby="success-title">
-      <div className="success-orbit" aria-hidden="true">
-        <span />
-      </div>
+      <div className="success-orbit" aria-hidden="true"><span /></div>
       <div className="success-content">
         <p className="eyebrow">Submission confirmed</p>
-        <div className="success-mark" aria-hidden="true">
-          ✓
-        </div>
-        <h1 id="success-title">
-          {isVip ? "VIP Application" : "Application"}
-          <span>Received</span>
-        </h1>
+        <div className="success-mark" aria-hidden="true">✓</div>
+        <h1 id="success-title">Application<span>Submitted</span></h1>
         <p>
-          {isVip ? (
-            <>Your application has been submitted.</>
-          ) : (
-            <>
-              Thank you for applying.
-              <br />
-              If selected, we will contact you using the email provided.
-            </>
-          )}
+          Thank you for your application.<br />
+          Your responses have been received successfully.<br />
+          We’ll contact you using the email provided if there are any updates.
         </p>
         <button className="primary-button" type="button" onClick={onReturn}>
-          <span>Return home</span>
-          <span aria-hidden="true">↗</span>
+          <span>Return home</span><span aria-hidden="true">↗</span>
         </button>
       </div>
       <p className="success-footer">Private Membership · 2026</p>

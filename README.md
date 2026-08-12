@@ -24,7 +24,7 @@ npm run lint
 npm test
 ```
 
-## Despliegue público con GitHub Pages
+## Publicación con GitHub Pages
 
 El workflow `.github/workflows/deploy-pages.yml` compila y publica automáticamente el sitio en GitHub Pages al hacer push a `main`. La salida estática se puede comprobar localmente con:
 
@@ -33,6 +33,10 @@ npm run build:pages
 ```
 
 No hay login de GPT ni autenticación de visitantes. El formulario envía directamente a Supabase con la publishable key y las políticas RLS incluidas.
+
+## Flujo de solicitud
+
+El formulario conserva el avance incompleto en `sessionStorage` y divide la solicitud en pasos breves. Incluye la confirmación del nombre, las preguntas de confianza y organización, la presentación de 20 minutos, el escenario de la jirafa, el escenario de $1,000,000 y la elección de King Nicolas. La pantalla final solo aparece después de que Supabase confirma el envío.
 
 ## Seguridad de datos
 

@@ -19,6 +19,26 @@ create table public.applications (
     constraint applications_how_heard_length check (how_heard is null or char_length(how_heard) <= 80),
   contribution text
     constraint applications_contribution_length check (contribution is null or char_length(contribution) <= 1200),
+  trustworthiness smallint
+    constraint applications_trustworthiness_range check (trustworthiness between 1 and 10),
+  organization_trust text
+    constraint applications_organization_trust_length check (organization_trust is null or char_length(organization_trust) between 1 and 1200),
+  organization_reputation text
+    constraint applications_organization_reputation_length check (organization_reputation is null or char_length(organization_reputation) between 1 and 1200),
+  unique_contribution text
+    constraint applications_unique_contribution_length check (unique_contribution is null or char_length(unique_contribution) between 1 and 1200),
+  worthy_of_trust text
+    constraint applications_worthy_of_trust_length check (worthy_of_trust is null or char_length(worthy_of_trust) between 1 and 1200),
+  three_specific_things text
+    constraint applications_three_specific_things_length check (three_specific_things is null or char_length(three_specific_things) between 1 and 1200),
+  presentation_topic text
+    constraint applications_presentation_topic_length check (presentation_topic is null or char_length(presentation_topic) between 1 and 1200),
+  giraffe_plan text
+    constraint applications_giraffe_plan_length check (giraffe_plan is null or char_length(giraffe_plan) between 1 and 1200),
+  million_dollar_plan text
+    constraint applications_million_dollar_plan_length check (million_dollar_plan is null or char_length(million_dollar_plan) between 1 and 1200),
+  nicolas_choice text
+    constraint applications_nicolas_choice_check check (nicolas_choice is null or nicolas_choice = 'King Nicolas'),
   random_question text
     constraint applications_random_question_check check (
       random_question in (
@@ -38,7 +58,19 @@ create table public.applications (
     ),
   created_at timestamptz not null default now(),
   constraint applications_answer_version_check check (
-    (presentation_answer is not null and penguin_answer is not null)
+    (
+      trustworthiness is not null
+      and organization_trust is not null
+      and organization_reputation is not null
+      and unique_contribution is not null
+      and worthy_of_trust is not null
+      and three_specific_things is not null
+      and presentation_topic is not null
+      and giraffe_plan is not null
+      and million_dollar_plan is not null
+      and nicolas_choice = 'King Nicolas'
+    )
+    or (presentation_answer is not null and penguin_answer is not null)
     or (random_question is not null and random_answer is not null)
   )
 );
