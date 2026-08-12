@@ -947,50 +947,79 @@ textarea {
 }
 
 .restricted-entry {
-  align-items: flex-end;
-  border-top: 1px solid rgba(112, 31, 47, 0.5);
+  align-items: stretch;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 18px;
-  padding-top: 24px;
+  gap: 10px;
+  margin-top: 34px;
 }
 
 .restricted-entry button {
   align-items: center;
-  background: linear-gradient(135deg, rgba(91, 25, 39, 0.62), rgba(55, 18, 28, 0.34));
-  border: 1px solid rgba(151, 58, 75, 0.62);
-  box-shadow: inset 3px 0 0 #7f273d, 0 12px 38px rgba(45, 8, 18, 0.2);
-  color: #e1b5bd;
+  background: linear-gradient(125deg, #8f1838 0%, #72132e 58%, #531020 100%);
+  border: 1px solid #c14764;
+  box-shadow: 0 18px 48px rgba(104, 12, 42, 0.34), inset 0 1px 0 rgba(255, 229, 235, 0.16);
+  color: #fff7f8;
   cursor: pointer;
-  display: inline-flex;
+  display: flex;
   font-family: inherit;
-  font-size: 0.7rem;
-  gap: 18px;
-  letter-spacing: 0.22em;
-  min-height: 48px;
-  padding: 0 20px 0 23px;
-  text-transform: uppercase;
-  transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease, transform 220ms ease;
+  justify-content: space-between;
+  min-height: 104px;
+  padding: 24px 28px;
+  text-align: left;
+  transition: border-color 220ms ease, box-shadow 220ms ease, filter 220ms ease, transform 220ms ease;
+  width: 100%;
 }
 
 .restricted-entry button:hover,
 .restricted-entry button:focus-visible {
-  background: linear-gradient(135deg, rgba(116, 31, 49, 0.78), rgba(67, 20, 32, 0.48));
-  border-color: rgba(197, 93, 111, 0.82);
-  color: #f0d0d5;
-  transform: translateY(-2px);
+  border-color: #ed8da2;
+  box-shadow: 0 22px 58px rgba(130, 15, 51, 0.48), inset 0 1px 0 rgba(255, 239, 242, 0.22);
+  filter: brightness(1.1);
+  transform: translateY(-3px);
 }
-.restricted-entry button::before {
-  background: #a53e55;
-  border-radius: 50%;
-  box-shadow: 0 0 0 4px rgba(165, 62, 85, 0.12);
-  content: "";
-  height: 6px;
-  width: 6px;
+
+.restricted-entry-copy {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
 }
-.restricted-entry button span { color: #c46f80; margin-left: 2px; }
-.restricted-entry small { color: var(--stone); font-size: 0.55rem; letter-spacing: 0.17em; text-transform: uppercase; }
+
+.restricted-entry-copy small {
+  color: #f0b8c5;
+  font-size: 0.59rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.restricted-entry-copy strong {
+  color: #fffafb;
+  font-family: var(--font-display), serif;
+  font-size: clamp(1.45rem, 2.8vw, 2rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.restricted-entry-arrow {
+  align-items: center;
+  border: 1px solid rgba(255, 230, 235, 0.55);
+  color: #fff5f7;
+  display: flex;
+  flex: 0 0 42px;
+  font-size: 1rem;
+  height: 42px;
+  justify-content: center;
+}
+
+.restricted-entry > small {
+  color: #c77a8d;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-align: right;
+  text-transform: uppercase;
+}
 
 .restricted-overlay {
   align-items: center;

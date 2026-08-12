@@ -1123,7 +1123,13 @@ function ConfidentialTransition({ firstName }: { firstName: string }) {
 function RestrictedAccessLink({ denied, onOpen }: { denied: boolean; onOpen: () => void }) {
   return (
     <div className="restricted-entry">
-      <button type="button" onClick={onOpen}>Restricted data <span aria-hidden="true">↗</span></button>
+      <button type="button" onClick={onOpen}>
+        <span className="restricted-entry-copy">
+          <small>Restricted access</small>
+          <strong>View restricted data</strong>
+        </span>
+        <span className="restricted-entry-arrow" aria-hidden="true">↗</span>
+      </button>
       {denied && <small>Access request denied</small>}
     </div>
   );
