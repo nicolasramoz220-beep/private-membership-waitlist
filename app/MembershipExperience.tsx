@@ -1125,7 +1125,6 @@ function RestrictedAccessLink({ denied, onOpen }: { denied: boolean; onOpen: () 
     <div className="restricted-entry">
       <button type="button" onClick={onOpen}>
         <span className="restricted-entry-copy">
-          <small>Restricted access</small>
           <strong>View restricted data</strong>
         </span>
         <span className="restricted-entry-arrow" aria-hidden="true">↗</span>
