@@ -36,7 +36,7 @@ No hay login de GPT ni autenticación de visitantes. El formulario envía direct
 
 ## Flujo de solicitud
 
-El formulario conserva el avance incompleto en `sessionStorage` y divide la solicitud en pasos breves. Incluye la confirmación del nombre, las preguntas de confianza y organización, la presentación de 20 minutos, el escenario de la jirafa, el escenario de $1,000,000 y la elección de King Nicolas. La pantalla final solo aparece después de que Supabase confirma el envío.
+El formulario conserva el avance incompleto en `sessionStorage` y divide la solicitud en 13 pasos breves. Incluye la confirmación personalizada del nombre, las preguntas de confianza y organización, la presentación de 20 minutos con su motivo, los escenarios de la jirafa y el pingüino, el escenario de $1,000,000, la elección de King Nicolas y la declaración final. La experiencia restringida es completamente ficticia: no solicita ubicación ni consulta servicios externos. La pantalla final solo aparece después de que Supabase confirma el envío.
 
 ## Seguridad de datos
 

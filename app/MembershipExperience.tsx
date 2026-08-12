@@ -29,6 +29,7 @@ type FormValues = {
   three_specific_things: string;
   presentation_topic: string;
   giraffe_plan: string;
+  penguin_answer: string;
   million_dollar_plan: string;
   nicolas_choice: string;
   website: string;
@@ -39,7 +40,7 @@ type FormErrors = Partial<Record<FieldName, string>>;
 
 const VIP_PIN = "1927";
 const STORAGE_KEY = "private-membership-application-draft";
-const REVIEW_STEP = 10;
+const REVIEW_STEP = 12;
 
 const EMPTY_FORM: FormValues = {
   first_name: "",
@@ -59,6 +60,7 @@ const EMPTY_FORM: FormValues = {
   three_specific_things: "",
   presentation_topic: "",
   giraffe_plan: "",
+  penguin_answer: "",
   million_dollar_plan: "",
   nicolas_choice: "",
   website: "",
@@ -82,8 +84,10 @@ const STEP_FIELDS: FieldName[][] = [
   ["giraffe_plan"],
   ["three_specific_things"],
   ["presentation_topic"],
+  ["penguin_answer"],
   ["million_dollar_plan"],
   ["nicolas_choice"],
+  [],
   [],
 ];
 
@@ -96,8 +100,10 @@ const STEP_LABELS = [
   "Important question",
   "Personal detail",
   "Unexpected expertise",
+  "Unexpected responsibility",
   "The scenario",
   "Be honest",
+  "Declaration",
   "Review",
 ];
 
@@ -113,26 +119,32 @@ function loadDraft(): {
   values: FormValues;
   nameConfirmed: boolean;
   escapeCount: number;
+  giraffeConfirmed: boolean;
+  restrictedSeen: boolean;
 } {
   if (typeof window === "undefined") {
-    return { values: EMPTY_FORM, nameConfirmed: false, escapeCount: 0 };
+    return { values: EMPTY_FORM, nameConfirmed: false, escapeCount: 0, giraffeConfirmed: false, restrictedSeen: false };
   }
 
   try {
     const saved = window.sessionStorage.getItem(STORAGE_KEY);
-    if (!saved) return { values: EMPTY_FORM, nameConfirmed: false, escapeCount: 0 };
+    if (!saved) return { values: EMPTY_FORM, nameConfirmed: false, escapeCount: 0, giraffeConfirmed: false, restrictedSeen: false };
     const parsed = JSON.parse(saved) as Partial<{
       values: Partial<FormValues>;
       nameConfirmed: boolean;
       escapeCount: number;
+      giraffeConfirmed: boolean;
+      restrictedSeen: boolean;
     }>;
     return {
       values: { ...EMPTY_FORM, ...parsed.values, website: "" },
       nameConfirmed: Boolean(parsed.nameConfirmed),
       escapeCount: Math.min(2, Math.max(0, parsed.escapeCount || 0)),
+      giraffeConfirmed: Boolean(parsed.giraffeConfirmed),
+      restrictedSeen: Boolean(parsed.restrictedSeen),
     };
   } catch {
-    return { values: EMPTY_FORM, nameConfirmed: false, escapeCount: 0 };
+    return { values: EMPTY_FORM, nameConfirmed: false, escapeCount: 0, giraffeConfirmed: false, restrictedSeen: false };
   }
 }
 
@@ -382,6 +394,13 @@ function ApplicationFlow({
   const [kingReaction, setKingReaction] = useState("");
   const [escapeCount, setEscapeCount] = useState(initialDraft.escapeCount);
   const [escapeReaction, setEscapeReaction] = useState("");
+  const [giraffeConfirmed, setGiraffeConfirmed] = useState(initialDraft.giraffeConfirmed);
+  const [declarationReaction, setDeclarationReaction] = useState("");
+  const [confidentialPending, setConfidentialPending] = useState(false);
+  const [restrictedOpen, setRestrictedOpen] = useState(false);
+  const [restrictedSeen, setRestrictedSeen] = useState(initialDraft.restrictedSeen);
+  const [restrictedFast, setRestrictedFast] = useState(false);
+  const [restrictedDenied, setRestrictedDenied] = useState(initialDraft.restrictedSeen);
   const [reviewIndex, setReviewIndex] = useState(0);
   const [reviewReady, setReviewReady] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -392,18 +411,22 @@ function ApplicationFlow({
   const reactionTimerRef = useRef<number | null>(null);
   const reviewTimersRef = useRef<number[]>([]);
   const nameTimerRef = useRef<number | null>(null);
+  const confidentialTimerRef = useRef<number | null>(null);
+  const confidentialSeenRef = useRef(false);
+  const restrictedScrollRef = useRef(0);
 
   useEffect(() => {
     window.sessionStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ values: { ...values, website: "" }, nameConfirmed, escapeCount }),
+      JSON.stringify({ values: { ...values, website: "" }, nameConfirmed, escapeCount, giraffeConfirmed, restrictedSeen }),
     );
-  }, [values, nameConfirmed, escapeCount]);
+  }, [values, nameConfirmed, escapeCount, giraffeConfirmed, restrictedSeen]);
 
   useEffect(() => {
     return () => {
       if (reactionTimerRef.current) window.clearTimeout(reactionTimerRef.current);
       if (nameTimerRef.current) window.clearTimeout(nameTimerRef.current);
+      if (confidentialTimerRef.current) window.clearTimeout(confidentialTimerRef.current);
       reviewTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     };
   }, []);
@@ -446,6 +469,15 @@ function ApplicationFlow({
   };
 
   const validateStep = (stepToValidate: number) => {
+    if (stepToValidate === 11 && !giraffeConfirmed) {
+      const attempt = (validationAttemptsRef.current[stepToValidate] || 0) + 1;
+      validationAttemptsRef.current[stepToValidate] = attempt;
+      const playful = ["You forgot something.", "You had one job.", "We literally just talked about this."];
+      setValidationMessage(playful[attempt - 1] || "Complete the required declaration.");
+      window.requestAnimationFrame(() => document.getElementById("giraffe_declaration")?.focus());
+      return false;
+    }
+
     const fields = [...STEP_FIELDS[stepToValidate]];
     if (stepToValidate === 1 && values.how_heard === "Other") {
       fields.push("how_heard_other");
@@ -479,6 +511,14 @@ function ApplicationFlow({
   };
 
   const moveToStep = (nextStep: number) => {
+    if (nextStep === 2 && !confidentialSeenRef.current) {
+      confidentialSeenRef.current = true;
+      setConfidentialPending(true);
+      const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 80 : 1550;
+      confidentialTimerRef.current = window.setTimeout(() => setConfidentialPending(false), duration);
+    } else {
+      setConfidentialPending(false);
+    }
     setStep(nextStep);
     setErrors({});
     setValidationMessage("");
@@ -513,7 +553,7 @@ function ApplicationFlow({
       return;
     }
     completedStepsRef.current.add(step);
-    if (step === 9) {
+    if (step === 11) {
       beginReview();
       return;
     }
@@ -528,6 +568,19 @@ function ApplicationFlow({
       return;
     }
     goNext();
+  };
+
+  const openRestricted = () => {
+    restrictedScrollRef.current = window.scrollY;
+    setRestrictedFast(restrictedSeen);
+    setRestrictedSeen(true);
+    setRestrictedOpen(true);
+  };
+
+  const closeRestricted = () => {
+    setRestrictedOpen(false);
+    setRestrictedDenied(true);
+    window.requestAnimationFrame(() => window.scrollTo({ top: restrictedScrollRef.current, behavior: "auto" }));
   };
 
   const goBack = () => {
@@ -596,8 +649,10 @@ function ApplicationFlow({
           three_specific_things: values.three_specific_things.trim(),
           presentation_topic: values.presentation_topic.trim(),
           giraffe_plan: values.giraffe_plan.trim(),
+          penguin_answer: values.penguin_answer.trim(),
           million_dollar_plan: values.million_dollar_plan.trim(),
           nicolas_choice: values.nicolas_choice,
+          giraffe_declaration: giraffeConfirmed,
         }),
       });
 
@@ -687,11 +742,15 @@ function ApplicationFlow({
         )}
 
         {step === 2 && (
-          <>
-            <StepHeading eyebrow="03 — The organization" title="Trust is earned slowly." />
-            <TextareaField label="You’re invited into a private group where not everything is explained immediately. What would make you trust the people inside enough to stay?" name="organization_trust" value={values.organization_trust} error={errors.organization_trust} onChange={updateValue} />
-            <TextareaField label="Imagine you’ve been part of this organization for a year. What would you want the other members to know you for?" name="organization_reputation" value={values.organization_reputation} error={errors.organization_reputation} onChange={updateValue} />
-          </>
+          confidentialPending ? (
+            <ConfidentialTransition firstName={firstName} />
+          ) : (
+            <>
+              <StepHeading eyebrow="03 — The organization" title="Trust is earned slowly." />
+              <TextareaField label="You’re invited into a private group where not everything is explained immediately. What would make you trust the people inside enough to stay?" name="organization_trust" value={values.organization_trust} error={errors.organization_trust} onChange={updateValue} />
+              <TextareaField label="Imagine you’ve been part of this organization for a year. What would you want the other members to know you for?" name="organization_reputation" value={values.organization_reputation} error={errors.organization_reputation} onChange={updateValue} />
+            </>
+          )
         )}
 
         {step === 3 && (
@@ -706,11 +765,13 @@ function ApplicationFlow({
             <StepHeading eyebrow="05 — What you bring" title="Every member changes the room." />
             <TextareaField label="Every member of this organization is expected to bring something others don’t. What would people eventually realize you bring to the room?" name="unique_contribution" value={values.unique_contribution} error={errors.unique_contribution} onChange={updateValue} />
             <TextareaField label="If this organization trusted you with something important that nobody else could know, what would make you worthy of that trust?" name="worthy_of_trust" value={values.worthy_of_trust} error={errors.worthy_of_trust} onChange={updateValue} />
+            <RestrictedAccessLink denied={restrictedDenied} onOpen={openRestricted} />
           </>
         )}
 
         {step === 5 && (
           <>
+            <p className="personalized-transition">Alright, <strong>{firstName}</strong>.<span>Time for something important.</span></p>
             <StepHeading eyebrow="Important question" title="You have 30 minutes to hide a giraffe from the government." subtitle="What’s your plan?" />
             <TextareaField label="Your giraffe strategy" name="giraffe_plan" value={values.giraffe_plan} error={errors.giraffe_plan} reaction={giraffeReaction(values.giraffe_plan)} onChange={updateValue} spacious />
           </>
@@ -725,19 +786,26 @@ function ApplicationFlow({
 
         {step === 7 && (
           <>
-            <StepHeading eyebrow="08 — Unexpected expertise" title="What is something you could give a 20-minute presentation about with zero preparation?" />
-            <TextareaField label="Your topic" name="presentation_topic" value={values.presentation_topic} error={errors.presentation_topic} onChange={updateValue} spacious />
+            <StepHeading eyebrow="08 — Unexpected expertise" title="What is something you could give a 20-minute presentation about with zero preparation — and why?" />
+            <TextareaField label="Your topic and why you chose it" name="presentation_topic" value={values.presentation_topic} error={errors.presentation_topic} reaction={answerReaction(values.presentation_topic)} onChange={updateValue} spacious />
           </>
         )}
 
         {step === 8 && (
           <>
-            <StepHeading eyebrow="09 — The scenario" title="You wake up tomorrow with $1,000,000 in your bank account." subtitle="No explanation. No sender. No message. The only note says: “You have 24 hours. Make it count.” After 24 hours, whatever money is still in the account disappears. What’s your plan?" />
-            <TextareaField label="Your plan" name="million_dollar_plan" value={values.million_dollar_plan} error={errors.million_dollar_plan} onChange={updateValue} spacious />
+            <StepHeading eyebrow="09 — Unexpected responsibility" title="You have been given a penguin." subtitle="You cannot sell it or give it away. What do you do?" />
+            <TextareaField label="Your penguin plan" name="penguin_answer" value={values.penguin_answer} error={errors.penguin_answer} reaction={answerReaction(values.penguin_answer)} onChange={updateValue} spacious />
           </>
         )}
 
         {step === 9 && (
+          <>
+            <StepHeading eyebrow="10 — The scenario" title="You wake up tomorrow with $1,000,000 in your bank account." subtitle="No explanation. No sender. No message. The only note says: “You have 24 hours. Make it count.” After 24 hours, whatever money is still in the account disappears. What’s your plan?" />
+            <TextareaField label="Your plan" name="million_dollar_plan" value={values.million_dollar_plan} error={errors.million_dollar_plan} onChange={updateValue} spacious />
+          </>
+        )}
+
+        {step === 10 && (
           <KingNicolas
             firstName={firstName}
             selected={values.nicolas_choice === "King Nicolas"}
@@ -746,8 +814,21 @@ function ApplicationFlow({
           />
         )}
 
+        {step === 11 && (
+          <GiraffeDeclaration
+            firstName={firstName}
+            checked={giraffeConfirmed}
+            reaction={declarationReaction}
+            onChange={(checked) => {
+              setGiraffeConfirmed(checked);
+              setDeclarationReaction(checked ? "Good. We would've known." : "");
+              if (checked) setValidationMessage("");
+            }}
+          />
+        )}
+
         {step === REVIEW_STEP && (
-          <ReviewPanel visibleLines={reviewIndex} ready={reviewReady} />
+          <ReviewPanel firstName={firstName} visibleLines={reviewIndex} ready={reviewReady} />
         )}
       </div>
 
@@ -767,7 +848,7 @@ function ApplicationFlow({
               className={`primary-button continue-button ${step === 5 ? escapeOffset : ""}`}
               type="button"
               onClick={handleContinue}
-              disabled={step === 9 && values.nicolas_choice !== "King Nicolas"}
+              disabled={confidentialPending || (step === 10 && values.nicolas_choice !== "King Nicolas")}
             >
               <span>Continue</span><span aria-hidden="true">→</span>
             </button>
@@ -797,6 +878,10 @@ function ApplicationFlow({
             window.setTimeout(() => document.getElementById("first_name")?.focus(), 20);
           }}
         />
+      )}
+
+      {restrictedOpen && (
+        <RestrictedDataOverlay fast={restrictedFast} onClose={closeRestricted} />
       )}
     </form>
   );
@@ -904,7 +989,7 @@ function TextareaField({
         aria-describedby={error ? errorId : metaId}
       />
       <div className="field-meta" id={metaId}>
-        <span className={reaction ? "answer-reaction is-visible" : "answer-reaction"}>{reaction || "Required"}</span>
+        <span className={reaction ? `answer-reaction is-visible ${reaction.startsWith("Okay Shakespeare") ? "is-prominent" : ""}` : "answer-reaction"}>{reaction || "Required"}</span>
         <span>{value.length} / 1200</span>
       </div>
       {error && <p className="field-error" id={errorId}>{error}</p>}
@@ -968,7 +1053,7 @@ function KingNicolas({
 }) {
   return (
     <section className="king-question" aria-labelledby="king-heading">
-      <p className="eyebrow">10 — Be honest</p>
+      <p className="eyebrow">11 — Be honest</p>
       <h3 id="king-heading">Who’s better?</h3>
       <div className="king-options">
         <button type="button" onClick={() => onChoose("applicant")}>{firstName}</button>
@@ -990,21 +1075,30 @@ function NameConfirmationModal({
   onAccept: () => void;
   onFix: () => void;
 }) {
+  const normalizedName = firstName.trim().toLocaleLowerCase("en-US");
+  const isBianka = normalizedName === "bianka";
+  const isNicolas = normalizedName === "nicolas";
+  const prompt = isBianka
+    ? "Are you sure you want to use that ugly name?"
+    : isNicolas
+      ? "Owww, what a grandiose name."
+      : "Please confirm this is the name you'd like us to use.";
+
   return (
     <div className="modal-backdrop" role="presentation">
       <section className="name-modal" role="dialog" aria-modal="true" aria-labelledby="name-modal-title">
         <p className="eyebrow">Identity confirmation</p>
         {accepted ? (
           <div className="name-modal-accepted" aria-live="polite">
-            <h3>Fair enough.</h3>
-            <p>We all have problems.</p>
+            <h3>{isBianka ? "Fair enough." : "Name confirmed."}</h3>
+            <p>{isBianka ? "We all have problems." : "We'll use it carefully."}</p>
           </div>
         ) : (
           <>
             <h3 id="name-modal-title">{firstName.toUpperCase()}?</h3>
-            <p>Are you sure you want to use that ugly name?</p>
+            <p>{prompt}</p>
             <div className="modal-actions">
-              <button className="primary-button" type="button" onClick={onAccept}>Yes, I have no choice</button>
+              <button className="primary-button" type="button" onClick={onAccept}>{isBianka ? "Yes, I have no choice" : "Confirm name"}</button>
               <button className="secondary-button" type="button" onClick={onFix}>Let me fix it</button>
             </div>
           </>
@@ -1014,14 +1108,142 @@ function NameConfirmationModal({
   );
 }
 
-function ReviewPanel({ visibleLines, ready }: { visibleLines: number; ready: boolean }) {
+function ConfidentialTransition({ firstName }: { firstName: string }) {
+  return (
+    <section className="confidential-transition" aria-live="polite" aria-label="Confidential member evaluation">
+      <p>Let’s continue, <strong>{firstName}</strong>.<span>The next section matters.</span></p>
+      <div className="classification-rule" aria-hidden="true" />
+      <div className="confidential-stamp">Confidential</div>
+      <h3>Member Evaluation</h3>
+      <small>Internal membership assessment</small>
+    </section>
+  );
+}
+
+function RestrictedAccessLink({ denied, onOpen }: { denied: boolean; onOpen: () => void }) {
+  return (
+    <div className="restricted-entry">
+      <button type="button" onClick={onOpen}>Restricted data <span aria-hidden="true">↗</span></button>
+      {denied && <small>Access request denied</small>}
+    </div>
+  );
+}
+
+const RESTRICTED_SEQUENCE = [
+  "Establishing secure session...",
+  "Validating applicant credentials...",
+  "Cross-referencing authorization registry...",
+  "Resolving federal access permissions...",
+] as const;
+
+function RestrictedDataOverlay({ fast, onClose }: { fast: boolean; onClose: () => void }) {
+  const [phase, setPhase] = useState(() =>
+    fast || window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? RESTRICTED_SEQUENCE.length
+      : 0,
+  );
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.body.style.overflow = "hidden";
+    const timers = fast || reducedMotion
+      ? []
+      : RESTRICTED_SEQUENCE.map((_, index) =>
+          window.setTimeout(() => setPhase(index + 1), 520 + index * 540),
+        );
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+      window.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [fast, onClose]);
+
+  const complete = phase >= RESTRICTED_SEQUENCE.length;
+  return (
+    <div className="restricted-overlay" role="dialog" aria-modal="true" aria-labelledby="restricted-title">
+      <button className="restricted-close" type="button" onClick={onClose} aria-label="Close restricted information system">×</button>
+      <div className="restricted-shell">
+        <header>
+          <p>Restricted information system</p>
+          <span>Secure gateway // internal use</span>
+        </header>
+        <div className="restricted-progress" aria-hidden="true"><span style={{ width: `${Math.max(8, (phase / RESTRICTED_SEQUENCE.length) * 100)}%` }} /></div>
+        {!complete ? (
+          <section className="restricted-processing" aria-live="polite">
+            <p>Secure information gateway</p>
+            <h2 id="restricted-title">Processing Access Request</h2>
+            <ol>
+              {RESTRICTED_SEQUENCE.map((status, index) => (
+                <li className={index < phase ? "is-complete" : index === phase ? "is-active" : ""} key={status}>
+                  <span>{String(index + 1).padStart(2, "0")}</span>{status}
+                </li>
+              ))}
+            </ol>
+          </section>
+        ) : (
+          <section className="restricted-denial" aria-live="polite">
+            <p>Status: <strong>Insufficient authorization</strong></p>
+            <h2 id="restricted-title">Access Denied</h2>
+            <div className="restricted-copy">
+              <p>According to applicable United States government access records, your current authorization level does not permit access to this information.</p>
+              <dl><div><dt>Required clearance</dt><dd>Level IV</dd></div><div><dt>Request status</dt><dd>Closed</dd></div></dl>
+              <small>Fictional interface demonstration. No external records were queried.</small>
+            </div>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function GiraffeDeclaration({
+  firstName,
+  checked,
+  reaction,
+  onChange,
+}: {
+  firstName: string;
+  checked: boolean;
+  reaction: string;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <section className="declaration-panel" aria-labelledby="declaration-title">
+      <p className="personalized-transition">Still with us, <strong>{firstName}</strong>?<span>Good.</span></p>
+      <p className="eyebrow">12 — Declaration</p>
+      <h3 id="declaration-title">Final confirmation.</h3>
+      <label className="declaration-check" htmlFor="giraffe_declaration">
+        <input id="giraffe_declaration" type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+        <span aria-hidden="true" />
+        <strong>I confirm that I answered honestly and did not Google how to hide a giraffe.</strong>
+      </label>
+      <p className="declaration-reaction" aria-live="polite">{reaction}</p>
+    </section>
+  );
+}
+
+function ReviewPanel({ firstName, visibleLines, ready }: { firstName: string; visibleLines: number; ready: boolean }) {
+  const normalizedName = firstName.trim().toLocaleLowerCase("en-US");
+  const nameResult = normalizedName === "bianka"
+    ? "unfortunate"
+    : normalizedName === "nicolas"
+      ? "exceptional"
+      : "verified";
+  const reviewLines = REVIEW_LINES.map(([label, result]) =>
+    label === "Checking name quality" ? [label, nameResult] as const : [label, result] as const,
+  );
   return (
     <section className="review-panel" aria-labelledby="review-heading">
       <p className="eyebrow">Final review</p>
       <h3 id="review-heading">{ready ? "Application ready." : "Reviewing application..."}</h3>
       <p className="review-disclaimer">A brief ceremonial review. No artificial intelligence, judgment, or acceptance decision is involved.</p>
       <div className="review-lines" aria-live="polite">
-        {REVIEW_LINES.map(([label, result], index) => (
+        {reviewLines.map(([label, result], index) => (
           <div className={index < visibleLines ? "review-line is-visible" : "review-line"} key={label}>
             <span>{label}</span><i aria-hidden="true" /><strong>{result}</strong>
           </div>
@@ -1033,10 +1255,11 @@ function ReviewPanel({ visibleLines, ready }: { visibleLines: number; ready: boo
 }
 
 function answerReaction(value: string) {
-  const length = value.trim().length;
-  if (!length) return "";
-  if (length < 24) return "Wow. Really poured your heart into that one.";
-  if (length > 850) return "Okay Shakespeare, that's enough.";
+  const clean = value.trim();
+  if (!clean) return "";
+  const words = clean.split(/\s+/).length;
+  if (clean.length < 24) return "Wow. Really poured your heart into that one.";
+  if (words >= 35) return "Okay Shakespeare, that's enough.";
   return "";
 }
 

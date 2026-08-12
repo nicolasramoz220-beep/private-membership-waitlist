@@ -35,6 +35,7 @@ create table public.applications (
     constraint applications_presentation_topic_length check (presentation_topic is null or char_length(presentation_topic) between 1 and 1200),
   giraffe_plan text
     constraint applications_giraffe_plan_length check (giraffe_plan is null or char_length(giraffe_plan) between 1 and 1200),
+  giraffe_declaration boolean,
   million_dollar_plan text
     constraint applications_million_dollar_plan_length check (million_dollar_plan is null or char_length(million_dollar_plan) between 1 and 1200),
   nicolas_choice text
@@ -67,8 +68,10 @@ create table public.applications (
       and three_specific_things is not null
       and presentation_topic is not null
       and giraffe_plan is not null
+      and penguin_answer is not null
       and million_dollar_plan is not null
       and nicolas_choice = 'King Nicolas'
+      and giraffe_declaration is true
     )
     or (presentation_answer is not null and penguin_answer is not null)
     or (random_question is not null and random_answer is not null)
